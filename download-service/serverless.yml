@@ -1,0 +1,206 @@
+# Welcome to Serverless!
+#
+# This file is the main config file for your service.
+# It's very minimal at this point and uses default values.
+# You can always add more config options for more control.
+# We've included some commented out config examples here.
+# Just uncomment any of them to get that config option.
+#
+# For full config options, check the docs:
+#    docs.serverless.com
+#
+# Happy Coding!
+
+service: download
+# app and org for use with dashboard.serverless.com
+#app: your-app-name
+#org: your-org-name
+
+# You can pin your service to only deploy with a specific Serverless version
+# Check out our docs for more details
+frameworkVersion: '2'
+variablesResolutionMode: 20210326
+
+provider:
+  name: aws
+  runtime: nodejs12.x
+  lambdaHashingVersion: 20201221
+
+# you can overwrite defaults here
+  # stage: ${env:STAGE}
+  region: ${env:REGION}
+
+# you can add statements to the Lambda function's IAM Role here
+  iamRoleStatements:
+    - Effect: 'Allow'
+      Action:
+        - 'lambda:InvokeFunction'
+      Resource: '*'
+    - Effect: Allow
+      Action:
+        - s3:GetObject
+        - s3:PutObject
+        - s3:PutObjectAcl
+      Resource: "arn:aws:s3:::${env:CACHE_BUCKET}/*"
+
+# you can define service wide environment variables here
+#  environment:
+#    variable1: value1
+
+# you can add packaging information here
+#package:
+#  patterns:
+#    - '!exclude-me.js'
+#    - '!exclude-me-dir/**'
+#    - include-me.js
+#    - include-me-dir/**
+
+custom:
+  webpack:
+    webpackConfig: ./webpack.config.js
+    includeModules:
+      forceExclude:
+        - aws-sdk
+    packager: 'yarn'
+  warmup:
+    enabled: true
+    events:
+      - schedule: rate(5 minutes)
+    prewarm: true
+    concurrency: 1
+  prune:
+    automatic: true
+    number: 5
+  documentation:
+    api:
+      info:
+        version: '1.0.0'
+        title: Assets Streamer API
+        description: Assets Streamer API
+      tags:
+        -
+          name: Asset
+          description: Assets Management
+          resources:
+    resources:
+      -
+        path: "/download"
+        description: "Get Download Link"
+
+    models:
+      - name: MessageResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+      - name: GetDownloadLinkRequest
+        contentType: "application/json"
+        schema:
+          type: "object"
+          required: 
+            - assets
+          properties:
+            assets:
+              type: array
+      - name: GetDownloadLinkResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            result:
+              type: string
+      - name: 400JsonResponse
+        contentType: "application/json"
+        schema:
+          type: object
+          properties:
+            message:
+              type: string
+            statusCode:
+              type: number
+  commonModelSchemaFragments:
+    MethodResponse400Json:
+      statusCode: '400'
+      responseModels:
+        "application/json": 400JsonResponse
+
+functions:
+  fetch_assets:
+    handler: src/api.download
+#    The following are a few example events you can configure
+#    NOTE: Please make sure to change your handler code to work with those events
+#    Check the event documentation for details
+    events:
+      - http:
+          path: /download
+          method: post
+          cors: true
+          reqValidatorName: onlyBody
+          methodResponses:
+              - statusCode: '200'
+                responseModels:
+                  "application/json": GetDownloadLinkResponse
+              - ${self:custom.commonModelSchemaFragments.MethodResponse400Json}
+  purge_zip:
+    handler: src/api.purge
+    events:
+      - http:
+          path: /purge
+          method: post
+          cors: true
+#      - websocket: $connect
+#      - s3: ${env:BUCKET}
+#      - schedule: rate(10 minutes)
+#      - sns: greeter-topic
+#      - stream: arn:aws:dynamodb:region:XXXXXX:table/foo/stream/1970-01-01T00:00:00.000
+#      - alexaSkill: amzn1.ask.skill.xx-xx-xx-xx
+#      - alexaSmartHome: amzn1.ask.skill.xx-xx-xx-xx
+#      - iot:
+#          sql: "SELECT * FROM 'some_topic'"
+#      - cloudwatchEvent:
+#          event:
+#            source:
+#              - "aws.ec2"
+#            detail-type:
+#              - "EC2 Instance State-change Notification"
+#            detail:
+#              state:
+#                - pending
+      # - cloudwatchLog: '/aws/lambda/download'
+#      - cognitoUserPool:
+#          pool: MyUserPool
+#          trigger: PreSignUp
+#      - alb:
+#          listenerArn: arn:aws:elasticloadbalancing:us-east-1:XXXXXX:listener/app/my-load-balancer/50dc6c495c0c9188/
+#          priority: 1
+#          conditions:
+#            host: example.com
+#            path: /hello
+
+#    Define function environment variables here
+#    environment:
+#      variable2: value2
+
+# you can add CloudFormation resource templates here
+resources:
+  Resources:
+    onlyBody:  
+      Type: "AWS::ApiGateway::RequestValidator"
+      Properties:
+        Name: 'only-body'
+        RestApiId: 
+          Ref: ApiGatewayRestApi
+        ValidateRequestBody: true
+        ValidateRequestParameters: false
+
+useDotenv: true
+plugins:
+  - serverless-webpack
+  - serverless-offline
+  - serverless-plugin-warmup
+  - serverless-dotenv-plugin
+  - serverless-prune-plugin
+  - serverless-reqvalidator-plugin
+  - serverless-aws-documentation

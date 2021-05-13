@@ -1,0 +1,35 @@
+{
+  "name": "download-service",
+  "version": "1.0.1",
+  "main": "src/api.js",
+  "scripts": {
+    "deploy:dev": "export NODE_ENV=dev && sls deploy --stage $NODE_ENV",
+    "deploy:production": "export NODE_ENV=production && sls deploy --stage $NODE_ENV",
+    "lint": "eslint src --ext ts,js --no-ignore --fix",
+    "serve": "sls offline",
+    "serve:watch": "nodemon -e js,ts,jsx,tsx -x yarn serve",
+    "tail:download": "sls logs --function download --tail",
+    "build": "sls webpack"
+  },
+  "devDependencies": {
+    "@babel/core": "^7.13.14",
+    "aws-sdk": "^2.876.0",
+    "babel-loader": "^8.2.2",
+    "nodemon": "^2.0.7",
+    "serverless": "^2.32.1",
+    "serverless-aws-documentation": "^1.1.0",
+    "serverless-dotenv-plugin": "^3.9.0",
+    "serverless-offline": "^6.9.0",
+    "serverless-plugin-warmup": "^5.2.2",
+    "serverless-prune-plugin": "^1.4.4",
+    "serverless-reqvalidator-plugin": "^1.0.4",
+    "serverless-webpack": "^5.4.0",
+    "webpack": "^5.30.0",
+    "webpack-node-externals": "^2.5.2"
+  },
+  "dependencies": {
+    "archiver": "^5.3.0",
+    "debug": "^4.1.1",
+    "node-fetch": "^2.6.1"
+  }
+}
